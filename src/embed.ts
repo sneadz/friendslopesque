@@ -56,6 +56,36 @@ export function buildEmbed(
   return embed;
 }
 
+export function buildFallbackEmbed(
+  appid: number,
+  name: string | null,
+  counts: VoteCounts,
+  closed = false,
+  voters: VoterMap = { yes: [], no: [] },
+): EmbedBuilder {
+  const storeUrl = `https://store.steampowered.com/app/${appid}`;
+  const title = name ?? `Jeu Steam #${appid}`;
+
+  const embed = new EmbedBuilder()
+    .setTitle(title)
+    .setDescription(`*Détails non disponibles — contenu restreint sur l'API Steam.*\n[Voir la page Steam](${storeUrl})`)
+    .setColor(closed ? 0x5865f2 : 0x1b2838)
+    .addFields(
+      { name: `🎮 Grave chaud ! (${counts.yes})`, value: formatVoters(voters.yes), inline: true },
+      { name: `💤 C'est non. (${counts.no})`,    value: formatVoters(voters.no),  inline: true },
+    );
+
+  if (closed) {
+    const verdict =
+      counts.yes > counts.no ? '🎮 Le groupe joue !'            :
+      counts.yes < counts.no ? '💤 Pas assez motivé.'            :
+                               '🤝 Égalité — à vous de trancher !';
+    embed.setFooter({ text: `Vote clos · ${verdict}` });
+  }
+
+  return embed;
+}
+
 // Clone l'embed existant du message et met à jour uniquement les champs de vote.
 // Évite tout appel à l'API Steam sur chaque clic de bouton.
 export function updateVoteFields(

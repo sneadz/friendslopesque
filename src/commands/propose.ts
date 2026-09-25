@@ -8,7 +8,7 @@ import {
 } from 'discord.js';
 import { searchApps, getAppDetails } from '../steam.js';
 import { saveProposal } from '../db.js';
-import { buildEmbed, buildVoteRow } from '../embed.js';
+import { buildEmbed, buildFallbackEmbed, buildVoteRow } from '../embed.js';
 
 export const data = new SlashCommandBuilder()
   .setName('propose')
@@ -48,7 +48,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const candidates = results.slice(0, 5);
 
   if (candidates.length === 1) {
-    await postProposal(interaction, candidates[0]!.appid);
+    await postProposal(interaction, candidates[0]!.appid, candidates[0]!.name);
     return;
   }
 
@@ -79,7 +79,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   collector.on('collect', async (sel) => {
     await sel.deferUpdate();
-    await postProposal(interaction, Number(sel.values[0]));
+    const picked = candidates.find((c) => String(c.appid) === sel.values[0]);
+    await postProposal(interaction, Number(sel.values[0]), picked?.name);
   });
 
   collector.on('end', async (collected) => {
@@ -89,7 +90,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   });
 }
 
-async function postProposal(interaction: ChatInputCommandInteraction, appid: number): Promise<void> {
+async function postProposal(interaction: ChatInputCommandInteraction, appid: number, name?: string): Promise<void> {
   let app;
   try {
     app = await getAppDetails(appid);
@@ -101,19 +102,14 @@ async function postProposal(interaction: ChatInputCommandInteraction, appid: num
     return;
   }
 
-  if (!app) {
-    // Storefront returned success: false — age-gate or delisted title
-    await interaction.editReply({
-      content: '❌ Ce jeu est inaccessible via l\'API Steam (titre âge-gatté ou retiré de la boutique).',
-      components: [],
-    });
-    return;
-  }
-
   const counts = { yes: 0, no: 0 };
+  const embed = app
+    ? buildEmbed(app, counts)
+    : buildFallbackEmbed(appid, name ?? null, counts);
+
   const msg = await interaction.editReply({
     content: '',
-    embeds: [buildEmbed(app, counts)],
+    embeds: [embed],
     components: [buildVoteRow()],
   });
 
