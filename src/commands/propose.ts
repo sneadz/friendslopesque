@@ -17,11 +17,20 @@ export const data = new SlashCommandBuilder()
     opt.setName('game').setDescription('Nom du jeu').setRequired(true)
   );
 
+const STEAM_URL_RE = /store\.steampowered\.com\/app\/(\d+)/;
+
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   const query = interaction.options.getString('game', true);
 
   // Defer immediately — Steam search + appdetails can exceed 3 s
   await interaction.deferReply();
+
+  // Direct Steam URL — skip search entirely
+  const urlMatch = STEAM_URL_RE.exec(query);
+  if (urlMatch) {
+    await postProposal(interaction, Number(urlMatch[1]));
+    return;
+  }
 
   let results;
   try {
