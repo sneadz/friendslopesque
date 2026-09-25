@@ -51,8 +51,10 @@ export async function searchApps(query: string): Promise<SteamSearchResult[]> {
 }
 
 export async function getAppDetails(appid: number): Promise<SteamAppDetails | null> {
-  const url = `https://store.steampowered.com/api/appdetails?appids=${appid}&l=french`;
-  const res = await fetch(url);
+  const url = `https://store.steampowered.com/api/appdetails?appids=${appid}&l=french&cc=fr`;
+  const res = await fetch(url, {
+    headers: { Cookie: 'birthtime=0; mature_content=1' },
+  });
   if (!res.ok) throw new Error(`Steam appdetails HTTP ${res.status}`);
   const json = (await res.json()) as StorefrontResponse;
   const entry = json[String(appid)];
